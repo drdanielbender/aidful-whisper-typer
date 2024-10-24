@@ -1,6 +1,6 @@
 {
   "model": {
-    "name": "tiny",
+    "name": "turbo",
     "options": ["tiny", "base", "small", "medium", "large", "turbo"],
     "description": "Whisper model to use for transcription (tiny=fastest, turbo=most accurate and fast, but needs more memory)"
   },
@@ -10,12 +10,69 @@
     "sample_format": "int16"
   },
   "output": {
-    "mode": "type",
+    "mode": "paste",
     "options": ["type", "paste", "clipboard"],
     "description": "type=character by character, paste=immediate paste, clipboard=copy only"
   },
   "type": {
     "delay": 0.005,
     "description": "Delay in ms between single key pressed in the type output mode. Increase this value if you miss letters."
+  },
+  "shortcut": {
+    "keys": ["ctrl", "alt", "s"],
+    "options": [
+      "ctrl",
+      "shift",
+      "alt",
+      "f1",
+      "f2",
+      "f3",
+      "f4",
+      "f5",
+      "f6",
+      "f7",
+      "f8",
+      "f9",
+      "f10",
+      "f11",
+      "f12",
+      "a",
+      "b",
+      "c",
+      "d",
+      "e",
+      "f",
+      "g",
+      "h",
+      "i",
+      "j",
+      "k",
+      "l",
+      "m",
+      "n",
+      "o",
+      "p",
+      "q",
+      "r",
+      "s",
+      "t",
+      "u",
+      "v",
+      "w",
+      "x",
+      "y",
+      "z",
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9"
+    ],
+    "description": "Keyboard shortcut combination to start/stop recording"
   }
 }

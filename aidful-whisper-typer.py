@@ -66,6 +66,10 @@ def validate_settings(settings):
         print(f"Invalid output mode. Using default 'type'")
         settings["output"]["mode"] = "paste"
 
+    if "shortcut" not in settings or "keys" not in settings["shortcut"]:
+        print("Invalid shortcut configuration. Using default CTRL+SHIFT+S")
+        settings["shortcut"] = {"keys": ["ctrl", "alt", "s"]}
+
     return settings
 
 settings = load_settings()
@@ -76,7 +80,31 @@ model = whisper.load_model(model_name)
 play_sound("model_loaded.wav")
 print(f"{model_name} model loaded")
 
-
+def get_key_combination(key_names):
+    key_set = set()
+    for key_name in key_names:
+        if key_name == "ctrl":
+            key_set.add(keyboard.Key.ctrl)
+        elif key_name == "shift":
+            key_set.add(keyboard.Key.shift)
+        elif key_name == "alt":
+            key_set.add(keyboard.Key.alt)
+        elif key_name.startswith('f') and key_name[1:].isdigit():
+            key_set.add(keyboard.Key.f1 if key_name == 'f1' else
+                       keyboard.Key.f2 if key_name == 'f2' else
+                       keyboard.Key.f3 if key_name == 'f3' else
+                       keyboard.Key.f4 if key_name == 'f4' else
+                       keyboard.Key.f5 if key_name == 'f5' else
+                       keyboard.Key.f6 if key_name == 'f6' else
+                       keyboard.Key.f7 if key_name == 'f7' else
+                       keyboard.Key.f8 if key_name == 'f8' else
+                       keyboard.Key.f9 if key_name == 'f9' else
+                       keyboard.Key.f10 if key_name == 'f10' else
+                       keyboard.Key.f11 if key_name == 'f11' else
+                       keyboard.Key.f12)
+        else:
+            key_set.add(keyboard.KeyCode(char=key_name))
+    return key_set
 
 def handle_transcribed_text(transcribed_text):
     output_mode = settings["output"]["mode"]
@@ -109,7 +137,7 @@ def handle_transcribed_text(transcribed_text):
 def transcribe_speech():
     global file_ready_counter
     i=1
-    print("ready - start transcribing with F2 ...\n")
+    print("ready - start transcribing with keyboard shortcut...\n")
     while not shutdown_event.is_set():
         while file_ready_counter<i and not shutdown_event.is_set():
             time.sleep(0.01)
@@ -134,12 +162,11 @@ def transcribe_speech():
 #keyboard events
 pressed = set()
 
+shortcut_keys = settings["shortcut"]["keys"]
 COMBINATIONS = [
     {
         "keys": [
-            #{keyboard.Key.ctrl ,keyboard.Key.shift, keyboard.KeyCode(char="r")},
-            #{keyboard.Key.ctrl ,keyboard.Key.shift, keyboard.KeyCode(char="R")},
-            {keyboard.Key.f2},
+            get_key_combination(shortcut_keys)
         ],
         "command": "start record",
     },
