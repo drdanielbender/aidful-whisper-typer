@@ -70,6 +70,9 @@ def validate_settings(settings):
         print("Invalid shortcut configuration. Using default CTRL+SHIFT+S")
         settings["shortcut"] = {"keys": ["ctrl", "alt", "s"]}
 
+    if "logging" not in settings:
+        settings["logging"] = {"enabled": True}
+
     return settings
 
 settings = load_settings()
@@ -149,9 +152,10 @@ def transcribe_speech():
             result = model.transcribe("test"+str(i)+".wav")
             transcribed_text = str(result["text"]).strip()
             print(">"+transcribed_text+"<\n")
-            now = str(datetime.now()).split(".")[0]
-            with codecs.open('transcribe.log', 'a', encoding='utf-8') as f:
-                f.write(now+" : "+transcribed_text+"\n")
+            if settings["logging"]["enabled"]:
+                now = str(datetime.now()).split(".")[0]
+                with codecs.open('transcribe.log', 'a', encoding='utf-8') as f:
+                    f.write(now+" : "+transcribed_text+"\n")
             handle_transcribed_text(transcribed_text)
             if os.path.exists("test"+str(i)+".wav"):
                 os.remove("test"+str(i)+".wav")

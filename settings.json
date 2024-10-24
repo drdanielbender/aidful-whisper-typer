@@ -18,6 +18,11 @@
     "delay": 0.005,
     "description": "Delay in ms between single key pressed in the type output mode. Increase this value if you miss letters."
   },
+  "logging": {
+    "enabled": false,
+    "options": [true, false],
+    "description": "Enable or disable logging of transcriptions to file"
+  },
   "shortcut": {
     "keys": ["ctrl", "alt", "s"],
     "options": [
