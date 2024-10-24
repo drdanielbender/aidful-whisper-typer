@@ -4,3 +4,4 @@ soundfile
 pynput
 pygame
 openai-whisper
+pyperclip

@@ -12,21 +12,9 @@ import pygame
 import signal
 import sys
 from datetime import datetime
-
-def play_sound(file_path):
-    pygame.mixer.init()
-    pygame.mixer.music.load(file_path)
-    pygame.mixer.music.play()
-    while pygame.mixer.music.get_busy():
-        pygame.time.Clock().tick(10)
-
-#load model
-#model selection -> (tiny base small medium large)
-print("loading model...")
-model_name = "tiny"
-model = whisper.load_model(model_name)
-play_sound("model_loaded.wav")
-print(f"{model_name} model loaded")
+import json
+import pyperclip
+from pynput.keyboard import Key
 
 file_ready_counter=0
 stop_recording=False
@@ -51,6 +39,75 @@ def signal_handler(sig, frame):
     cleanup()
     sys.exit(0)
 
+def play_sound(file_path):
+    pygame.mixer.init()
+    pygame.mixer.music.load(file_path)
+    pygame.mixer.music.play()
+    while pygame.mixer.music.get_busy():
+        pygame.time.Clock().tick(10)
+
+def load_settings():
+    try:
+        with open('settings.json', 'r') as f:
+            settings = json.load(f)
+            return validate_settings(settings)
+    except FileNotFoundError:
+        print("The setting.json file was not found. Initiating shutdown.")
+        cleanup()
+        sys.exit(0)
+
+def validate_settings(settings):
+    valid_models = settings["model"]["options"]
+    valid_output_modes = settings["output"]["options"]
+
+    if settings["model"]["name"] not in valid_models:
+        print(f"Invalid model name. Using default 'tiny'")
+        settings["model"]["name"] = "tiny"
+
+    if settings["output"]["mode"] not in valid_output_modes:
+        print(f"Invalid output mode. Using default 'type'")
+        settings["output"]["mode"] = "paste"
+
+    return settings
+
+settings = load_settings()
+
+print("loading model...")
+model_name = settings["model"]["name"]
+model = whisper.load_model(model_name)
+play_sound("model_loaded.wav")
+print(f"{model_name} model loaded")
+
+
+
+def handle_transcribed_text(transcribed_text):
+    output_mode = settings["output"]["mode"]
+
+    pyperclip.copy(transcribed_text)
+
+    if output_mode == "type":
+        for element in transcribed_text:
+            if shutdown_event.is_set():
+                break
+            try:
+                pykeyboard.type(element)
+                time.sleep(settings["type"]["delay"])
+            except:
+                print("empty or unknown symbol")
+
+    elif output_mode == "paste":
+        try:
+            with pykeyboard.pressed(Key.ctrl):
+                pykeyboard.tap('v')
+        except Exception as e:
+            print(f"Error pasting text: {e}")
+
+    elif output_mode == "clipboard":
+        print("Text copied to clipboard")
+
+    else:
+        print(f"Unknown output mode: {output_mode}")
+
 def transcribe_speech():
     global file_ready_counter
     i=1
@@ -69,14 +126,7 @@ def transcribe_speech():
             now = str(datetime.now()).split(".")[0]
             with codecs.open('transcribe.log', 'a', encoding='utf-8') as f:
                 f.write(now+" : "+transcribed_text+"\n")
-            for element in transcribed_text:
-                if shutdown_event.is_set():
-                    break
-                try:
-                    pykeyboard.type(element)
-                    time.sleep(0.0025)
-                except:
-                    print("empty or unknown symbol")
+            handle_transcribed_text(transcribed_text)
             if os.path.exists("test"+str(i)+".wav"):
                 os.remove("test"+str(i)+".wav")
             i=i+1
@@ -106,9 +156,9 @@ def record_speech():
     global is_recording
 
     is_recording = True
-    sample_format = 'int16'  # Data type
-    channels = 2
-    fs = 44100  # Sample rate
+    sample_format = settings["audio"]["sample_format"]
+    channels = settings["audio"]["channels"]
+    fs = settings["audio"]["sample_rate"]
 
     frames = []  # Initialize list to store frames
 
