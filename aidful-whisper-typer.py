@@ -2,7 +2,6 @@ from pynput import keyboard
 import codecs
 import whisper
 import time
-import subprocess
 import threading
 import sounddevice as sd
 import soundfile as sf
@@ -14,7 +13,6 @@ import sys
 from datetime import datetime
 import json
 import pyperclip
-from pynput.keyboard import Key
 
 file_ready_counter=0
 stop_recording=False
@@ -97,7 +95,7 @@ def handle_transcribed_text(transcribed_text):
 
     elif output_mode == "paste":
         try:
-            with pykeyboard.pressed(Key.ctrl):
+            with pykeyboard.pressed(keyboard.Key.ctrl):
                 pykeyboard.tap('v')
         except Exception as e:
             print(f"Error pasting text: {e}")
