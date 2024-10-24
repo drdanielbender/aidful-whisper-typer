@@ -40,11 +40,12 @@ def transcribe_speech():
             time.sleep(0.01)
 
         result = model.transcribe("test"+str(i)+".wav")
-        print(result["text"]+"\n")
+        transcribed_text = str(result["text"]).strip()
+        print(">"+transcribed_text+"<\n")
         now = str(datetime.now()).split(".")[0]
         with codecs.open('transcribe.log', 'a', encoding='utf-8') as f:
-            f.write(now+" : "+result["text"]+"\n")
-        for element in result["text"]:
+            f.write(now+" : "+transcribed_text+"\n")
+        for element in transcribed_text:
             try:
                 pykeyboard.type(element)
                 time.sleep(0.0025)
