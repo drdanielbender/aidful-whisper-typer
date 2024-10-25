@@ -71,7 +71,7 @@ def validate_settings(settings):
         settings["shortcut"] = {"keys": ["ctrl", "alt", "s"]}
 
     if "logging" not in settings:
-        settings["logging"] = {"enabled": True}
+        settings["logging"] = {"enabled": False}
 
     return settings
 
