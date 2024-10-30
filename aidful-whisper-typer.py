@@ -167,12 +167,9 @@ def transcribe_speech():
 pressed = set()
 
 shortcut_keys = settings["shortcut"]["keys"]
-COMBINATIONS = [
+COMBINATIONS = [ # list not needed in current version, but allows to register multiple shortcuts later
     {
-        "keys": [
-            get_key_combination(shortcut_keys)
-        ],
-        "command": "start record",
+        "keys": get_key_combination(shortcut_keys),
     },
 ]
 
@@ -225,6 +222,7 @@ t2.start()
 
 #hot key events
 def on_press(key):
+    global pressed
     pressed.add(key)
 
 def on_release(key):
@@ -232,15 +230,13 @@ def on_release(key):
     global stop_recording
     global is_recording
     for c in COMBINATIONS:
-        for keys in c["keys"]:
-            if keys.issubset(pressed):
-                if c["command"]=="start record" and stop_recording==False and is_recording==False:
-                    t1 = threading.Thread(target=record_speech)
-                    t1.start()
-                else:
-                    if c["command"]=="start record" and is_recording==True:
-                        stop_recording=True
-                pressed = set()
+        if c["keys"] == pressed:
+            if stop_recording==False and is_recording==False:
+                t1 = threading.Thread(target=record_speech)
+                t1.start()
+            else:
+                stop_recording=True
+    pressed = set()
 
 signal.signal(signal.SIGINT, signal_handler)
 
