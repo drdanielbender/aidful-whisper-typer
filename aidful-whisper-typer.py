@@ -73,6 +73,9 @@ def validate_settings(settings):
     if "logging" not in settings:
         settings["logging"] = {"enabled": False}
 
+    if "delete_wav" not in settings:
+        settings["delete_wav"] = {"enabled": False}
+
     return settings
 
 settings = load_settings()
@@ -157,7 +160,7 @@ def transcribe_speech():
                 with codecs.open('transcribe.log', 'a', encoding='utf-8') as f:
                     f.write(now+" : "+transcribed_text+"\n")
             handle_transcribed_text(transcribed_text)
-            if os.path.exists("test"+str(i)+".wav"):
+            if settings["delete_wav"]["enabled"] and os.path.exists("test"+str(i)+".wav"):
                 os.remove("test"+str(i)+".wav")
             i=i+1
         except Exception as e:

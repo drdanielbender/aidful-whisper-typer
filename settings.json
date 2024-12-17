@@ -24,7 +24,7 @@
     "description": "Enable or disable logging of transcriptions to file"
   },
   "shortcut": {
-    "keys": ["ctrl", "alt", "s"],
+    "keys": ["ctrl", "alt", "a"],
     "options": [
       "ctrl",
       "shift",
@@ -79,5 +79,10 @@
       "9"
     ],
     "description": "Keyboard shortcut combination to start/stop recording"
+  },
+  "delete_wav": {
+    "enabled": true,
+    "options": [true, false],
+    "description": "Set to false to listen to the WAV recordings"
   }
 }
