@@ -82,7 +82,18 @@ settings = load_settings()
 
 print("loading model...")
 model_name = settings["model"]["name"]
-model = whisper.load_model(model_name)
+
+# Cross-platform approach for model cache directory
+if os.name == 'nt':  # Windows
+    # Use %LOCALAPPDATA%\whisper on Windows
+    cache_dir = os.path.join(os.environ.get('LOCALAPPDATA', os.path.expanduser('~')), 'whisper')
+else:  # Unix-like systems (Linux, macOS)
+    cache_dir = os.path.join(os.path.expanduser("~"), ".cache", "whisper")
+
+# Ensure the directory exists
+os.makedirs(cache_dir, exist_ok=True)
+
+model = whisper.load_model(model_name, download_root=cache_dir)
 play_sound("model_loaded.wav")
 print(f"{model_name} model loaded")
 
@@ -213,6 +224,8 @@ def record_speech():
             file_ready_counter = file_ready_counter + 1
             play_sound("off.wav")
             print('Finish recording')
+    except Exception as e:
+        print(f"Error during recording: {e}")
     finally:
         stop_recording = False
         is_recording = False
