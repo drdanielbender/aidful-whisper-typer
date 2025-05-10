@@ -25,7 +25,7 @@ cd aidful-whisper-typer
 
 Create and activate a virtual environment and install the requirements:
 ```bash
-python -m venv .venv
+python3.11 -m venv .venv
 source .venv/bin/activate  # Linux/macOS
 .venv\Scripts\activate     # Windows
 pip install -r requirements.txt
