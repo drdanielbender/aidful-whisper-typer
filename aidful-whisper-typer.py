@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from pynput import keyboard
 import codecs
 import whisper
