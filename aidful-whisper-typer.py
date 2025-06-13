@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 from pynput import keyboard
 import codecs
-import whisper
 import time
 import threading
 import sounddevice as sd
@@ -14,6 +13,8 @@ import sys
 from datetime import datetime
 import json
 import pyperclip
+import subprocess
+import re
 
 file_ready_counter=0
 stop_recording=False
@@ -56,12 +57,7 @@ def load_settings():
         sys.exit(0)
 
 def validate_settings(settings):
-    valid_models = settings["model"]["options"]
     valid_output_modes = settings["output"]["options"]
-
-    if settings["model"]["name"] not in valid_models:
-        print(f"Invalid model name. Using default 'tiny'")
-        settings["model"]["name"] = "tiny"
 
     if settings["output"]["mode"] not in valid_output_modes:
         print(f"Invalid output mode. Using default 'type'")
@@ -77,26 +73,31 @@ def validate_settings(settings):
     if "delete_wav" not in settings:
         settings["delete_wav"] = {"enabled": False}
 
+    # Whisper.cpp settings
+    if "whisper_cpp" not in settings:
+        settings["whisper_cpp"] = {
+            "executable_path": "whisper-cli", # Default, assumes it's in PATH
+            "model_path": "ggml-base.en.bin" # Default, user needs to ensure this exists
+        }
+    else:
+        if "executable_path" not in settings["whisper_cpp"]:
+            settings["whisper_cpp"]["executable_path"] = "whisper-cli"
+        if "model_path" not in settings["whisper_cpp"]:
+            settings["whisper_cpp"]["model_path"] = "ggml-base.en.bin"
+
     return settings
 
 settings = load_settings()
 
-print("loading model...")
-model_name = settings["model"]["name"]
-
-# Cross-platform approach for model cache directory
-if os.name == 'nt':  # Windows
-    # Use %LOCALAPPDATA%\whisper on Windows
-    cache_dir = os.path.join(os.environ.get('LOCALAPPDATA', os.path.expanduser('~')), 'whisper')
-else:  # Unix-like systems (Linux, macOS)
-    cache_dir = os.path.join(os.path.expanduser("~"), ".cache", "whisper")
-
-# Ensure the directory exists
-os.makedirs(cache_dir, exist_ok=True)
-
-model = whisper.load_model(model_name, download_root=cache_dir)
+print("Using whisper.cpp for transcription.")
+# Check if whisper.cpp essentials are likely to work
+if not os.path.exists(settings["whisper_cpp"]["executable_path"]):
+    # A more robust check would be to try `subprocess.run([settings["whisper_cpp"]["executable_path"], "--version"], ...)`
+    # but for simplicity, we just check path existence.
+    print(f"Warning: whisper.cpp executable not found at '{settings['whisper_cpp']['executable_path']}'. Transcriptions will fail.")
+if not os.path.exists(settings["whisper_cpp"]["model_path"]):
+    print(f"Warning: whisper.cpp model not found at '{settings['whisper_cpp']['model_path']}'. Transcriptions will fail.")
 play_sound("model_loaded.wav")
-print(f"{model_name} model loaded")
 
 def get_key_combination(key_names):
     key_set = set()
@@ -163,20 +164,72 @@ def transcribe_speech():
         if shutdown_event.is_set():
             break
 
+        current_audio_file = "test"+str(i)+".wav"
+        transcribed_text = ""
+
         try:
-            result = model.transcribe("test"+str(i)+".wav")
-            transcribed_text = str(result["text"]).strip()
+            print(f"Transcribing {current_audio_file} using whisper.cpp...")
+            wcpp_config = settings["whisper_cpp"]
+            command = [
+                wcpp_config["executable_path"],
+                "--model", wcpp_config["model_path"],
+                "-l", "auto", # without this options, German voice was translated to English
+                current_audio_file
+            ]
+            
+            # Remove whisper.cpp's output timestamp. Doing this manually as the "-nt" parameter leads to a degraded result. See GitHub issue: https://github.com/ggml-org/whisper.cpp/issues/2312
+            try:
+                process = subprocess.run(command, capture_output=True, text=True, check=True, timeout=300)
+                timestamped_output = process.stdout.strip()
+                
+                plain_text_segments = []
+                # Regex from test-whispercpp.py
+                timestamp_pattern = re.compile(r"^\[\d{2}:\d{2}:\d{2}\.\d{3} --> \d{2}:\d{2}:\d{2}\.\d{3}\]\s*(.*)$")
+
+                for line in timestamped_output.splitlines():
+                    line = line.strip()
+                    if line:
+                        match = timestamp_pattern.match(line)
+                        if match:
+                            text_segment = match.group(1)
+                            plain_text_segments.append(text_segment)
+                
+                transcribed_text = " ".join(plain_text_segments).strip()
+
+                if process.stderr:
+                    print(f"whisper.cpp stderr: {process.stderr.strip()}")
+
+            except FileNotFoundError:
+                print(f"Error: whisper.cpp executable not found at '{wcpp_config['executable_path']}'. Check settings.json.")
+                transcribed_text = "" # Ensure it's empty on error
+            except subprocess.CalledProcessError as e:
+                print(f"Error during whisper.cpp transcription (exit code {e.returncode}): {e}")
+                print(f"Command: {' '.join(e.cmd)}")
+                print(f"Stdout: {e.stdout}")
+                print(f"Stderr: {e.stderr}")
+                transcribed_text = ""
+            except subprocess.TimeoutExpired:
+                print(f"Error: whisper.cpp process timed out.")
+                transcribed_text = ""
+            except Exception as e:
+                print(f"An unexpected error occurred with whisper.cpp: {e}")
+                transcribed_text = ""
+
             print(">"+transcribed_text+"<\n")
-            if settings["logging"]["enabled"]:
+            if settings["logging"]["enabled"] and transcribed_text:
                 now = str(datetime.now()).split(".")[0]
                 with codecs.open('transcribe.log', 'a', encoding='utf-8') as f:
                     f.write(now+" : "+transcribed_text+"\n")
-            handle_transcribed_text(transcribed_text)
-            if settings["delete_wav"]["enabled"] and os.path.exists("test"+str(i)+".wav"):
-                os.remove("test"+str(i)+".wav")
+            
+            if transcribed_text: # Only handle if text was actually transcribed
+                handle_transcribed_text(transcribed_text)
+            
+            if settings["delete_wav"]["enabled"] and os.path.exists(current_audio_file):
+                os.remove(current_audio_file)
             i=i+1
         except Exception as e:
-            print(f"Error in transcription: {e}")
+            # This outer try-except should catch errors not specific to transcription process itself
+            print(f"Error in transcription processing loop: {e}")
 
 #keyboard events
 pressed = set()

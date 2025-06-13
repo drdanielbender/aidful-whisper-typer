@@ -1,8 +1,7 @@
 {
-  "model": {
-    "name": "turbo",
-    "options": ["tiny", "base", "small", "medium", "large", "turbo"],
-    "description": "Whisper model to use for transcription (tiny=fastest, turbo=most accurate and fast, but needs more memory)"
+  "whisper_cpp": {
+    "executable_path": "/home/benda/Code/whisper.cpp/build/bin/whisper-cli",
+    "model_path": "/home/benda/Code/whisper.cpp/models/ggml-large-v3-turbo.bin"
   },
   "audio": {
     "sample_rate": 44100,
